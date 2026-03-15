@@ -38,16 +38,19 @@ function clearNowPlayingInterval(queue) {
 }
 
 async function main() {
-  // Verificar yt-dlp no startup (usado para streaming)
+  // Verificar yt-dlp e conectividade com YouTube no startup
   try {
     const { execSync } = require('child_process');
     const version = execSync('yt-dlp --version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     console.log('[Startup] yt-dlp:', version);
+    // Teste rápido: consegue obter URL de um vídeo?
+    execSync('yt-dlp -g --no-playlist "https://www.youtube.com/watch?v=dQw4w9WgXcQ"', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000 });
+    console.log('[Startup] YouTube: OK');
   } catch (e) {
-    console.warn('[Startup] yt-dlp:', e.message?.split('\n')[0] || 'não encontrado');
+    console.warn('[Startup]', e.message?.split('\n')[0] || 'verificação falhou');
   }
 
-  // useYoutubeDL: true — usa yt-dlp para streaming (necessário para extrair o stream)
+  // useYoutubeDL: true — streaming via yt-dlp
   await player.extractors.register(YoutubeiExtractor, { useYoutubeDL: true });
 
   player.events.on('playerStart', (queue, track) => {
