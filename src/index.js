@@ -50,9 +50,9 @@ async function main() {
     console.warn('[Startup]', e.message?.split('\n')[0] || 'verificação falhou');
   }
 
-  // useYoutubeDL + createStream: formato e buffer mais compatíveis com Docker
+  // useYoutubeDL + createStream: URL direta evita EPIPE/pipe em Docker
   const ytdlExec = require('youtube-dl-exec');
-  const { PassThrough } = require('stream');
+  const { Readable } = require('stream');
 
   function extractVideoId(url) {
     const match = url?.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
@@ -63,27 +63,25 @@ async function main() {
     const videoId = extractVideoId(track.url);
     if (!videoId) return undefined;
     const videoUrl = `https://youtu.be/${videoId}`;
-    const format = track.live ? 'best[height<=360]' : 'bestaudio/best';
-    const proc = ytdlExec.exec(videoUrl, {
-      format,
-      output: '-',
-      noWarnings: true,
-      noProgress: true,
-      cookies: extractor.options?.cookie,
-    });
-    proc.catch((e) => {
+    const format = track.live ? 'best[height<=360]' : 'worstaudio';
+    try {
+      const streamUrl = await ytdlExec(videoUrl, {
+        format,
+        getUrl: true,
+        noPlaylist: true,
+        noWarnings: true,
+        cookies: extractor.options?.cookie,
+      });
+      if (!streamUrl || typeof streamUrl !== 'string') return undefined;
+      const res = await fetch(streamUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      });
+      if (!res.ok || !res.body) return undefined;
+      return Readable.fromWeb(res.body);
+    } catch (e) {
       if (extractor.options?.logLevel === 'ALL') console.error('[yt-dlp]', e);
-    });
-    const out = proc.stdout;
-    if (!out) return undefined;
-    const kill = () => !proc.killed && proc.kill();
-    out.on('close', kill);
-    out.on('error', kill);
-    out.on('end', kill);
-    const passthrough = new PassThrough({ highWaterMark: 1 << 24 });
-    out.on('error', (e) => passthrough.destroy(e));
-    out.pipe(passthrough);
-    return passthrough;
+      return undefined;
+    }
   }
 
   await player.extractors.register(YoutubeiExtractor, {
