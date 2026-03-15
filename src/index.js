@@ -69,7 +69,8 @@ async function main() {
   player.events.on('disconnect', (queue) => clearNowPlayingInterval(queue));
 
   player.events.on('error', (queue, error) => {
-    console.error('Player error:', error);
+    console.error('Player error:', error?.message || error);
+    if (error?.stack) console.error(error.stack);
     const metadata = queue?.metadata;
     if (metadata?.channel) {
       metadata.channel.send(`Erro ao reproduzir: ${error.message}`).catch(() => {});

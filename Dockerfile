@@ -12,6 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Usar yt-dlp do sistema (pip) em vez do download do youtube-dl-exec
+ENV YOUTUBE_DL_DIR=/usr/local/bin
+ENV YOUTUBE_DL_SKIP_DOWNLOAD=1
+
 # Copiar arquivos de dependências
 COPY package.json package-lock.json ./
 
