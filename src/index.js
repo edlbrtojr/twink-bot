@@ -38,8 +38,11 @@ function clearNowPlayingInterval(queue) {
 }
 
 async function main() {
-  // useYoutubeDL: true — usa yt-dlp para streaming (contorna falha do signature decipher do youtubei.js)
-  await player.extractors.register(YoutubeiExtractor, { useYoutubeDL: true });
+  // useYoutubeDL: false + ANDROID — streaming nativo (melhor em Docker; useYoutubeDL: true pode falhar com "premature close")
+  await player.extractors.register(YoutubeiExtractor, {
+    useYoutubeDL: false,
+    streamOptions: { useClient: 'ANDROID' },
+  });
 
   player.events.on('playerStart', (queue, track) => {
     console.log('[Player] Iniciando:', track?.title || '?');
