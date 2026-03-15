@@ -155,6 +155,48 @@ async function main() {
   });
 
   client.on('interactionCreate', async (interaction) => {
+    if (interaction.isAutocomplete()) {
+      if (interaction.commandName === 'play') {
+        const focused = interaction.options.getFocused();
+        const FALLBACK_SUGGESTIONS = [
+          { name: 'The Weeknd - Blinding Lights', value: 'The Weeknd - Blinding Lights' },
+          { name: 'Ed Sheeran - Shape of You', value: 'Ed Sheeran - Shape of You' },
+          { name: 'Imagine Dragons - Believer', value: 'Imagine Dragons - Believer' },
+          { name: 'Coldplay - Yellow', value: 'Coldplay - Yellow' },
+          { name: 'Queen - Bohemian Rhapsody', value: 'Queen - Bohemian Rhapsody' },
+          { name: 'Dua Lipa - Levitating', value: 'Dua Lipa - Levitating' },
+        ];
+        if (focused.length < 2) {
+          const filtered = focused.length > 0
+            ? FALLBACK_SUGGESTIONS.filter(s =>
+                s.name.toLowerCase().includes(focused.toLowerCase()) ||
+                s.value.toLowerCase().includes(focused.toLowerCase())
+              ).slice(0, 25)
+            : FALLBACK_SUGGESTIONS.slice(0, 6);
+          return interaction.respond(filtered).catch(() => {});
+        }
+        try {
+          const searchQuery = `ytsearch:${focused}`;
+          const result = await player.search(searchQuery, {
+            requestedBy: interaction.user,
+            searchEngine: 'youtubeSearch',
+          });
+          const suggestions = (result.tracks || []).slice(0, 10).map((t) => ({
+            name: t.title.length > 100 ? `${t.title.slice(0, 97)}...` : t.title,
+            value: t.url,
+          }));
+          await interaction.respond(suggestions.length > 0 ? suggestions : FALLBACK_SUGGESTIONS.slice(0, 5)).catch(() => {});
+        } catch {
+          const filtered = FALLBACK_SUGGESTIONS.filter(s =>
+            s.name.toLowerCase().includes(focused.toLowerCase()) ||
+            s.value.toLowerCase().includes(focused.toLowerCase())
+          ).slice(0, 10);
+          await interaction.respond(filtered.length > 0 ? filtered : FALLBACK_SUGGESTIONS.slice(0, 5)).catch(() => {});
+        }
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     const command = interaction.client.commands?.get(interaction.commandName);
@@ -187,12 +229,13 @@ async function registerCommands() {
   const commands = [
     {
       name: 'play',
-      description: 'Toca um vídeo ou busca no YouTube',
+      description: 'Toca música por nome, artista ou link do YouTube',
       options: [{
         name: 'query',
         type: 3,
-        description: 'URL do YouTube ou termo de busca',
+        description: 'Nome da música, artista (ex: "The Weeknd - Blinding Lights") ou URL do YouTube',
         required: true,
+        autocomplete: true,
       }],
     },
     {

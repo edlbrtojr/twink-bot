@@ -1,6 +1,24 @@
 const { createAddedToQueueEmbed } = require('../utils/embeds');
-
 const { MessageFlags } = require('discord.js');
+
+/** Verifica se a query é uma URL do YouTube (vídeo ou playlist) */
+function isYoutubeUrl(query) {
+  if (!query || typeof query !== 'string') return false;
+  const trimmed = query.trim();
+  return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(trimmed);
+}
+
+/**
+ * Prepara a query para o player: se não for URL, usa o prefixo ytsearch:
+ * para forçar busca no YouTube por nome de música/artista.
+ */
+function prepareQuery(query) {
+  const trimmed = (query || '').trim();
+  if (!trimmed) return trimmed;
+  if (isYoutubeUrl(trimmed)) return trimmed;
+  // Força busca no YouTube quando for texto (nome, artista, etc.)
+  return `ytsearch:${trimmed}`;
+}
 
 module.exports = {
   async execute(interaction, player) {
@@ -14,21 +32,25 @@ module.exports = {
       });
     }
 
-    const query = interaction.options.getString('query', true);
+    const rawQuery = interaction.options.getString('query', true);
+    const query = prepareQuery(rawQuery);
     const guildId = interaction.guildId;
 
-    try {
-      await player.play(voiceChannel, query, {
-        nodeOptions: {
-          metadata: {
-            channel: interaction.channel,
-          },
-          leaveOnEmpty: true,
-          leaveOnEmptyCooldown: 60000,
-          leaveOnEnd: true,
-          leaveOnEndCooldown: 60000,
+    const playOptions = {
+      requestedBy: interaction.user,
+      nodeOptions: {
+        metadata: {
+          channel: interaction.channel,
         },
-      });
+        leaveOnEmpty: true,
+        leaveOnEmptyCooldown: 60000,
+        leaveOnEnd: true,
+        leaveOnEndCooldown: 60000,
+      },
+    };
+
+    try {
+      await player.play(voiceChannel, query, playOptions);
 
       const queue = player.nodes.get(guildId);
       if (!queue) {
