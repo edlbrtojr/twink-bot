@@ -42,6 +42,7 @@ async function main() {
   await player.extractors.register(YoutubeiExtractor, { useYoutubeDL: true });
 
   player.events.on('playerStart', (queue, track) => {
+    console.log('[Player] Iniciando:', track?.title || '?');
     const metadata = queue.metadata;
     if (!metadata?.channel) return;
 
@@ -69,7 +70,16 @@ async function main() {
   player.events.on('disconnect', (queue) => clearNowPlayingInterval(queue));
 
   player.events.on('error', (queue, error) => {
-    console.error('Player error:', error?.message || error);
+    console.error('[Player] ERRO:', error?.message || String(error));
+    if (error?.stack) console.error(error.stack);
+    const metadata = queue?.metadata;
+    if (metadata?.channel) {
+      metadata.channel.send(`Erro ao reproduzir: ${error.message}`).catch(() => {});
+    }
+  });
+
+  player.events.on('playerError', (queue, error, track) => {
+    console.error('[Player] ERRO DE REPRODUÇÃO:', track?.title, '|', error?.message || String(error));
     if (error?.stack) console.error(error.stack);
     const metadata = queue?.metadata;
     if (metadata?.channel) {
@@ -83,6 +93,7 @@ async function main() {
     if (!metadata?.channel) return;
 
     const playedFor = metadata.lastTrackStartTime ? (Date.now() - metadata.lastTrackStartTime) / 1000 : 0;
+    console.log('[Player] Fila vazia. Tocou por', playedFor.toFixed(1), 'segundos');
     const msg = playedFor < 30
       ? 'A reprodução foi interrompida. Verifique se o servidor tem acesso à internet e FFmpeg instalado. Use `/leave` para eu sair.'
       : 'Fila vazia. Use `/leave` para eu sair do canal.';
