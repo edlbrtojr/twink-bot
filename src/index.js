@@ -80,7 +80,8 @@ async function main() {
     execSync(`yt-dlp -g --no-playlist ${cookiesArg} "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000 });
     console.log('[Startup] YouTube: OK');
   } catch (e) {
-    console.warn('[Startup]', e.message?.split('\n')[0] || 'verificação falhou');
+    const stderr = e.stderr?.toString().trim();
+    console.warn('[Startup] yt-dlp teste falhou:', stderr || e.message?.split('\n')[0] || 'erro desconhecido');
   }
 
   const ytdlExec = require('youtube-dl-exec');
