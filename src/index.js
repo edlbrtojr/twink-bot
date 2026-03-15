@@ -81,6 +81,7 @@ async function main() {
     out.on('error', kill);
     out.on('end', kill);
     const passthrough = new PassThrough({ highWaterMark: 1 << 24 });
+    out.on('error', (e) => passthrough.destroy(e));
     out.pipe(passthrough);
     return passthrough;
   }
