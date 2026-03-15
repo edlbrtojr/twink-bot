@@ -26,9 +26,13 @@ RUN npm ci --omit=dev
 # Copiar código fonte
 COPY src ./src
 
-# Diretório para persistência do banco de favoritos (monte volume em /data no EasyPanel)
+# Diretório para persistência (banco de favoritos + cookies do YouTube)
+# Monte volume em /data no EasyPanel
 RUN mkdir -p /data
 ENV FAVORITOS_DB_PATH=/data/favoritos.db
+# Para evitar bloqueio do YouTube em IPs de datacenter, exporte cookies do
+# navegador (extensão "Get cookies.txt LOCALLY") e coloque em /data/cookies.txt
+ENV YT_COOKIES_PATH=/data/cookies.txt
 
 # O bot não expõe porta HTTP - conecta ao Discord via WebSocket
 CMD ["node", "src/index.js"]

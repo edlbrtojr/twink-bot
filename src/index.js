@@ -39,19 +39,50 @@ function clearNowPlayingInterval(queue) {
 }
 
 async function main() {
+  const fs = require('fs');
+  const ytCookiesPath = process.env.YT_COOKIES_PATH || '';
+
+  // Lê arquivo de cookies Netscape e retorna string "name=val; name2=val2" para o youtubei
+  function parseCookiesFile(filePath) {
+    try {
+      if (!filePath || !fs.existsSync(filePath)) return null;
+      const content = fs.readFileSync(filePath, 'utf8');
+      const cookies = [];
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const parts = trimmed.split('\t');
+        if (parts.length >= 7) {
+          cookies.push(`${parts[5]}=${parts[6]}`);
+        }
+      }
+      return cookies.length > 0 ? cookies.join('; ') : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const cookieString = parseCookiesFile(ytCookiesPath);
+  if (cookieString) {
+    console.log('[Startup] YouTube cookies carregados de', ytCookiesPath);
+  } else if (ytCookiesPath) {
+    console.warn('[Startup] Arquivo de cookies não encontrado:', ytCookiesPath);
+  } else {
+    console.warn('[Startup] YT_COOKIES_PATH não definido — YouTube pode bloquear IPs de datacenter');
+  }
+
   // Verificar yt-dlp e conectividade com YouTube no startup
   try {
     const { execSync } = require('child_process');
     const version = execSync('yt-dlp --version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     console.log('[Startup] yt-dlp:', version);
-    // Teste rápido: consegue obter URL de um vídeo?
-    execSync('yt-dlp -g --no-playlist "https://www.youtube.com/watch?v=dQw4w9WgXcQ"', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000 });
+    const cookiesArg = ytCookiesPath && fs.existsSync(ytCookiesPath) ? `--cookies "${ytCookiesPath}"` : '';
+    execSync(`yt-dlp -g --no-playlist ${cookiesArg} "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000 });
     console.log('[Startup] YouTube: OK');
   } catch (e) {
     console.warn('[Startup]', e.message?.split('\n')[0] || 'verificação falhou');
   }
 
-  // useYoutubeDL + createStream: URL direta evita EPIPE/pipe em Docker
   const ytdlExec = require('youtube-dl-exec');
   const { Readable } = require('stream');
 
@@ -60,24 +91,24 @@ async function main() {
     return match ? match[1] : null;
   }
 
-  async function createYtDlpStream(track, extractor) {
+  async function createYtDlpStream(track, _extractor) {
     const videoId = extractVideoId(track.url);
     if (!videoId) {
       console.warn('[yt-dlp] URL inválida:', track.url);
       return undefined;
     }
     const videoUrl = `https://youtu.be/${videoId}`;
-    // bestaudio/best: mais compatível que worstaudio (alguns vídeos não têm worst)
     const format = track.live ? 'best[height<=360]' : 'bestaudio/best';
     const ytdlOpts = {
       format,
       getUrl: true,
       noPlaylist: true,
       noWarnings: true,
-      cookies: extractor.options?.cookie,
-      // Evita bloqueios do YouTube em VPS (usa cliente web em vez de android)
       extractorArgs: 'youtube:player_client=web',
     };
+    if (ytCookiesPath && fs.existsSync(ytCookiesPath)) {
+      ytdlOpts.cookies = ytCookiesPath;
+    }
     try {
       const streamUrl = await ytdlExec(videoUrl, ytdlOpts, { timeout: 30000 });
       if (!streamUrl || typeof streamUrl !== 'string') {
@@ -86,7 +117,7 @@ async function main() {
       }
       const res = await fetch(streamUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         },
       });
       if (!res.ok || !res.body) {
@@ -100,11 +131,19 @@ async function main() {
     }
   }
 
-  await player.extractors.register(YoutubeiExtractor, {
+  const extractorOptions = {
     useYoutubeDL: true,
     createStream: createYtDlpStream,
-    streamOptions: { highWaterMark: 1 << 24 },
-  });
+    generateWithPoToken: true,
+    streamOptions: {
+      useClient: 'WEB',
+      highWaterMark: 1 << 24,
+    },
+  };
+  if (cookieString) {
+    extractorOptions.cookie = cookieString;
+  }
+  await player.extractors.register(YoutubeiExtractor, extractorOptions);
 
   player.events.on('playerStart', (queue, track) => {
     console.log('[Player] Iniciando:', track?.title || '?');
