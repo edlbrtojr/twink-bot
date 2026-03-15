@@ -11,6 +11,8 @@ const { Client, GatewayIntentBits, MessageFlags } = require('discord.js');
 const { createPlayerButtons, isPlayerButton, parsePlayerButtonId } = require('./utils/playerButtons');
 const { Player, QueueRepeatMode } = require('discord-player');
 const { YoutubeiExtractor, Log } = require('discord-player-youtubei');
+const { spawn } = require('child_process');
+const { PassThrough } = require('stream');
 
 // Suprime avisos do youtubei.js (ex: "Unable to find matching run for attachment run")
 // que aparecem ao tocar links de mix/radio do YouTube - não afetam a reprodução
@@ -89,7 +91,50 @@ async function main() {
     if (!stderr && !stdout) console.warn('[Startup] message:', msg.slice(0, 500));
   }
 
+  function createYtDlpStream(url) {
+    const args = [
+      '-f', 'bestaudio[ext=webm]/bestaudio/best',
+      '-o', '-',
+      '--no-playlist',
+      '--no-warnings',
+      '--no-progress',
+    ];
+    if (ytCookiesPath && fs.existsSync(ytCookiesPath)) {
+      args.push('--cookies', ytCookiesPath);
+    }
+    args.push(url);
+
+    const ytdlp = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const stream = new PassThrough({ highWaterMark: 1 << 24 });
+
+    ytdlp.stdout.pipe(stream);
+
+    ytdlp.stderr.on('data', (data) => {
+      const msg = data.toString().trim();
+      if (msg) console.warn('[yt-dlp stream]', msg);
+    });
+
+    ytdlp.on('error', (err) => {
+      console.error('[yt-dlp stream] Erro do processo:', err.message);
+      if (!stream.destroyed) stream.destroy(err);
+    });
+
+    ytdlp.on('close', (code) => {
+      if (code && code !== 0) {
+        console.warn('[yt-dlp stream] Processo encerrou com código:', code);
+      }
+      if (!stream.destroyed) stream.end();
+    });
+
+    stream.on('close', () => {
+      if (!ytdlp.killed) ytdlp.kill('SIGTERM');
+    });
+
+    return stream;
+  }
+
   const extractorOptions = {
+    createStream: createYtDlpStream,
     generateWithPoToken: true,
     streamOptions: {
       useClient: 'WEB',
