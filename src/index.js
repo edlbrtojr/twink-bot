@@ -155,6 +155,12 @@ async function main() {
     if (!metadata?.channel) return;
 
     metadata.lastTrackStartTime = Date.now();
+    metadata.lastTrack = track;
+    if (!metadata.autoplayHistory) metadata.autoplayHistory = [];
+    if (track.url) {
+      metadata.autoplayHistory.push(track.url);
+      if (metadata.autoplayHistory.length > 30) metadata.autoplayHistory.shift();
+    }
     clearNowPlayingInterval(queue);
 
     const { createNowPlayingEmbed } = require('./utils/embeds');
@@ -199,13 +205,51 @@ async function main() {
     }
   });
 
-  player.events.on('emptyQueue', (queue) => {
+  player.events.on('emptyQueue', async (queue) => {
     clearNowPlayingInterval(queue);
     const metadata = queue.metadata;
     if (!metadata?.channel) return;
 
-    if (queue.repeatMode === QueueRepeatMode.AUTOPLAY) {
-      console.log('[Player] Fila vazia — autoplay ativo, buscando faixa similar...');
+    if (queue.repeatMode === QueueRepeatMode.AUTOPLAY && metadata.lastTrack) {
+      const lastTrack = metadata.lastTrack;
+      const history = new Set(metadata.autoplayHistory || []);
+
+      const queries = [
+        lastTrack.author,
+        `${lastTrack.author} mix`,
+        lastTrack.title.replace(/\(.*?\)/g, '').trim(),
+      ].filter(Boolean);
+
+      console.log('[Autoplay] Buscando faixa similar a:', lastTrack.title);
+
+      for (const searchQuery of queries) {
+        try {
+          const result = await player.search(`ytsearch:${searchQuery}`, {
+            requestedBy: metadata.lastTrack.requestedBy,
+          });
+
+          const candidates = (result.tracks || []).filter(
+            (t) => t.url && !history.has(t.url) && t.durationMS > 30000,
+          );
+
+          if (candidates.length > 0) {
+            const pick = candidates[Math.floor(Math.random() * Math.min(candidates.length, 5))];
+            console.log('[Autoplay] Próxima faixa:', pick.title);
+
+            await player.play(queue.channel, pick.url, {
+              nodeOptions: {
+                metadata,
+              },
+            });
+            return;
+          }
+        } catch (err) {
+          console.error('[Autoplay] Erro na busca:', err.message);
+        }
+      }
+
+      console.warn('[Autoplay] Nenhuma faixa similar encontrada');
+      metadata.channel.send('📻 Autoplay: não encontrei mais músicas similares. Use `/play` para recomeçar.').catch(() => {});
       return;
     }
 
