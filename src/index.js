@@ -50,8 +50,46 @@ async function main() {
     console.warn('[Startup]', e.message?.split('\n')[0] || 'verificação falhou');
   }
 
-  // useYoutubeDL: true — streaming via yt-dlp
-  await player.extractors.register(YoutubeiExtractor, { useYoutubeDL: true });
+  // useYoutubeDL + createStream: formato e buffer mais compatíveis com Docker
+  const ytdlExec = require('youtube-dl-exec');
+  const { PassThrough } = require('stream');
+
+  function extractVideoId(url) {
+    const match = url?.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
+    return match ? match[1] : null;
+  }
+
+  async function createYtDlpStream(track, extractor) {
+    const videoId = extractVideoId(track.url);
+    if (!videoId) return undefined;
+    const videoUrl = `https://youtu.be/${videoId}`;
+    const format = track.live ? 'best[height<=360]' : 'bestaudio/best';
+    const proc = ytdlExec.exec(videoUrl, {
+      format,
+      output: '-',
+      noWarnings: true,
+      noProgress: true,
+      cookies: extractor.options?.cookie,
+    });
+    proc.catch((e) => {
+      if (extractor.options?.logLevel === 'ALL') console.error('[yt-dlp]', e);
+    });
+    const out = proc.stdout;
+    if (!out) return undefined;
+    const kill = () => !proc.killed && proc.kill();
+    out.on('close', kill);
+    out.on('error', kill);
+    out.on('end', kill);
+    const passthrough = new PassThrough({ highWaterMark: 1 << 24 });
+    out.pipe(passthrough);
+    return passthrough;
+  }
+
+  await player.extractors.register(YoutubeiExtractor, {
+    useYoutubeDL: true,
+    createStream: createYtDlpStream,
+    streamOptions: { highWaterMark: 1 << 24 },
+  });
 
   player.events.on('playerStart', (queue, track) => {
     console.log('[Player] Iniciando:', track?.title || '?');
