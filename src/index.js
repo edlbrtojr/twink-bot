@@ -77,7 +77,7 @@ async function main() {
     const version = execSync('yt-dlp --version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     console.log('[Startup] yt-dlp:', version);
     const cookiesArg = ytCookiesPath && fs.existsSync(ytCookiesPath) ? `--cookies "${ytCookiesPath}"` : '';
-    execSync(`yt-dlp -g --no-playlist ${cookiesArg} "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000 });
+    execSync(`yt-dlp -g --no-playlist --js-runtimes node ${cookiesArg} "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 30000 });
     console.log('[Startup] YouTube: OK');
   } catch (e) {
     const stderr = e.stderr?.toString().trim();
@@ -110,6 +110,7 @@ async function main() {
       getUrl: true,
       noPlaylist: true,
       noWarnings: true,
+      jsRuntimes: 'node',
       extractorArgs: 'youtube:player_client=web',
     };
     if (ytCookiesPath && fs.existsSync(ytCookiesPath)) {

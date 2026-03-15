@@ -7,9 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     g++ \
     ffmpeg \
-    && pip3 install --break-system-packages --upgrade yt-dlp \
+    && pip3 install --break-system-packages --upgrade yt-dlp yt-dlp-ejs \
     && yt-dlp --version \
     && rm -rf /var/lib/apt/lists/*
+
+# yt-dlp usa Node.js (já presente na imagem) para resolver desafios do YouTube
+RUN mkdir -p /etc && echo "--js-runtimes node" > /etc/yt-dlp.conf
 
 WORKDIR /app
 
