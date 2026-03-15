@@ -60,16 +60,11 @@ async function main() {
     return match ? match[1] : null;
   }
 
-  function getVideoId(track) {
-    return extractVideoId(track.url) || track.id || track.raw?.id || null;
-  }
-
   async function createYtDlpStream(track, extractor) {
-    const videoId = getVideoId(track);
+    const videoId = extractVideoId(track.url);
     if (!videoId) return undefined;
     const videoUrl = `https://youtu.be/${videoId}`;
-    // bestaudio/best: fallback para vídeos sem bestaudio (ex: alguns shorts/lives)
-    const format = track.live ? 'best[height<=360]' : 'bestaudio/best';
+    const format = track.live ? 'best[height<=360]' : 'worstaudio';
     try {
       const streamUrl = await ytdlExec(videoUrl, {
         format,
@@ -78,9 +73,8 @@ async function main() {
         noWarnings: true,
         cookies: extractor.options?.cookie,
       });
-      const url = typeof streamUrl === 'string' ? streamUrl.trim() : null;
-      if (!url) return undefined;
-      const res = await fetch(url, {
+      if (!streamUrl || typeof streamUrl !== 'string') return undefined;
+      const res = await fetch(streamUrl, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       });
       if (!res.ok || !res.body) return undefined;
