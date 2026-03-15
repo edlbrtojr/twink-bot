@@ -81,7 +81,12 @@ async function main() {
     console.log('[Startup] YouTube: OK');
   } catch (e) {
     const stderr = e.stderr?.toString().trim();
-    console.warn('[Startup] yt-dlp teste falhou:', stderr || e.message?.split('\n')[0] || 'erro desconhecido');
+    const stdout = e.stdout?.toString().trim();
+    const msg = e.message || '';
+    console.warn('[Startup] yt-dlp teste falhou');
+    if (stderr) console.warn('[Startup] stderr:', stderr);
+    if (stdout) console.warn('[Startup] stdout:', stdout);
+    if (!stderr && !stdout) console.warn('[Startup] message:', msg.slice(0, 500));
   }
 
   const ytdlExec = require('youtube-dl-exec');
