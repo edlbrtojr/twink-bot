@@ -38,11 +38,17 @@ function clearNowPlayingInterval(queue) {
 }
 
 async function main() {
-  // useYoutubeDL: false + ANDROID — streaming nativo (melhor em Docker; useYoutubeDL: true pode falhar com "premature close")
-  await player.extractors.register(YoutubeiExtractor, {
-    useYoutubeDL: false,
-    streamOptions: { useClient: 'ANDROID' },
-  });
+  // Verificar yt-dlp no startup (usado para streaming)
+  try {
+    const { execSync } = require('child_process');
+    const version = execSync('yt-dlp --version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    console.log('[Startup] yt-dlp:', version);
+  } catch (e) {
+    console.warn('[Startup] yt-dlp:', e.message?.split('\n')[0] || 'não encontrado');
+  }
+
+  // useYoutubeDL: true — usa yt-dlp para streaming (necessário para extrair o stream)
+  await player.extractors.register(YoutubeiExtractor, { useYoutubeDL: true });
 
   player.events.on('playerStart', (queue, track) => {
     console.log('[Player] Iniciando:', track?.title || '?');

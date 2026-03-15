@@ -10,7 +10,7 @@ module.exports = {
     if (!queue) {
       return interaction.reply({
         content: 'Não há fila no momento.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

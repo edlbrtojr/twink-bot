@@ -8,7 +8,7 @@ module.exports = {
     if (indice < 1) {
       return interaction.reply({
         content: 'O índice deve ser maior que 0.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -16,7 +16,7 @@ module.exports = {
     if (!removed) {
       return interaction.reply({
         content: `Não foi possível remover. Verifique se o índice ${indice} existe. Use \`/favoritos list\` para ver seus favoritos.`,
-        ephemeral: true,
+        flags: 64,
       });
     }
 

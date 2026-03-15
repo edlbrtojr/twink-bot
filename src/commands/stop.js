@@ -7,7 +7,7 @@ module.exports = {
     if (!queue) {
       return interaction.reply({
         content: 'Não há fila para parar.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

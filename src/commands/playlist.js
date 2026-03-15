@@ -4,7 +4,7 @@ module.exports = {
     if (!voiceChannel) {
       return interaction.reply({
         content: 'Entre em um canal de voz primeiro.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -14,14 +14,14 @@ module.exports = {
     if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
       return interaction.reply({
         content: 'Informe uma URL válida do YouTube.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
     if (!url.includes('list=') && !url.includes('/playlist')) {
       return interaction.reply({
         content: 'Para playlists, use uma URL no formato: https://www.youtube.com/playlist?list=ID_DA_PLAYLIST',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

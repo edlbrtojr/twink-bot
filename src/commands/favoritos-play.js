@@ -7,7 +7,7 @@ module.exports = {
     if (!voiceChannel) {
       return interaction.reply({
         content: 'Entre em um canal de voz primeiro.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -17,7 +17,7 @@ module.exports = {
     if (indice < 1) {
       return interaction.reply({
         content: 'O índice deve ser maior que 0.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -25,7 +25,7 @@ module.exports = {
     if (!fav) {
       return interaction.reply({
         content: `Favorito #${indice} não encontrado. Use \`/favoritos list\` para ver seus favoritos.`,
-        ephemeral: true,
+        flags: 64,
       });
     }
 

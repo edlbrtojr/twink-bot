@@ -14,7 +14,7 @@ module.exports = {
     if (!queue) {
       return interaction.reply({
         content: 'Não há nada tocando no momento.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

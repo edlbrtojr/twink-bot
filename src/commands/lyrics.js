@@ -28,7 +28,7 @@ module.exports = {
     if (!apiKey) {
       return interaction.reply({
         content: 'A API do Genius não está configurada. Defina GENIUS_API_KEY no .env',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -50,7 +50,7 @@ module.exports = {
     } else {
       return interaction.reply({
         content: 'Não há música tocando. Use a opção `busca` para procurar letras.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

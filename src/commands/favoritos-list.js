@@ -12,7 +12,7 @@ module.exports = {
     if (total === 0) {
       return interaction.reply({
         content: 'Você não tem músicas nos favoritos. Use `/favoritos add` para adicionar.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

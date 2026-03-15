@@ -7,14 +7,14 @@ module.exports = {
     if (!queue) {
       return interaction.reply({
         content: 'Não há nada tocando no momento.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
     if (queue.node.isPaused()) {
       return interaction.reply({
         content: 'A reprodução já está pausada.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

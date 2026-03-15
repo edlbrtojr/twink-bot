@@ -18,7 +18,7 @@ module.exports = {
     if (!queue) {
       return interaction.reply({
         content: 'Não há nada tocando no momento.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -39,7 +39,7 @@ module.exports = {
     if (!filterName) {
       return interaction.reply({
         content: 'Preset inválido.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

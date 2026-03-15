@@ -7,14 +7,14 @@ module.exports = {
     if (!queue) {
       return interaction.reply({
         content: 'Não há fila no momento.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
     if (queue.tracks.size < 2) {
       return interaction.reply({
         content: 'É necessário ter pelo menos 2 músicas na fila para embaralhar.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 

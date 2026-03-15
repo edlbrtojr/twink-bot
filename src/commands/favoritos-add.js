@@ -19,7 +19,7 @@ module.exports = {
       if (!track) {
         return interaction.reply({
           content: 'Não há música tocando ou na fila. Informe uma URL ou adicione uma música primeiro.',
-          ephemeral: true,
+          flags: 64,
         });
       }
       trackUrl = track.url;
@@ -29,7 +29,7 @@ module.exports = {
     if (!trackUrl.includes('youtube.com') && !trackUrl.includes('youtu.be')) {
       return interaction.reply({
         content: 'Informe uma URL válida do YouTube.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
