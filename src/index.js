@@ -45,6 +45,7 @@ async function main() {
     const metadata = queue.metadata;
     if (!metadata?.channel) return;
 
+    metadata.lastTrackStartTime = Date.now();
     clearNowPlayingInterval(queue);
 
     const { createNowPlayingEmbed } = require('./utils/embeds');
@@ -78,9 +79,13 @@ async function main() {
   player.events.on('emptyQueue', (queue) => {
     clearNowPlayingInterval(queue);
     const metadata = queue.metadata;
-    if (metadata?.channel) {
-      metadata.channel.send('Fila vazia. Use `/leave` para eu sair do canal.').catch(() => {});
-    }
+    if (!metadata?.channel) return;
+
+    const playedFor = metadata.lastTrackStartTime ? (Date.now() - metadata.lastTrackStartTime) / 1000 : 0;
+    const msg = playedFor < 30
+      ? 'A reprodução foi interrompida. Verifique se o servidor tem acesso à internet e FFmpeg instalado. Use `/leave` para eu sair.'
+      : 'Fila vazia. Use `/leave` para eu sair do canal.';
+    metadata.channel.send(msg).catch(() => {});
   });
 
   client.once('ready', async () => {
