@@ -62,25 +62,40 @@ async function main() {
 
   async function createYtDlpStream(track, extractor) {
     const videoId = extractVideoId(track.url);
-    if (!videoId) return undefined;
+    if (!videoId) {
+      console.warn('[yt-dlp] URL inválida:', track.url);
+      return undefined;
+    }
     const videoUrl = `https://youtu.be/${videoId}`;
-    const format = track.live ? 'best[height<=360]' : 'worstaudio';
+    // bestaudio/best: mais compatível que worstaudio (alguns vídeos não têm worst)
+    const format = track.live ? 'best[height<=360]' : 'bestaudio/best';
+    const ytdlOpts = {
+      format,
+      getUrl: true,
+      noPlaylist: true,
+      noWarnings: true,
+      cookies: extractor.options?.cookie,
+      // Evita bloqueios do YouTube em VPS (usa cliente web em vez de android)
+      extractorArgs: 'youtube:player_client=web',
+    };
     try {
-      const streamUrl = await ytdlExec(videoUrl, {
-        format,
-        getUrl: true,
-        noPlaylist: true,
-        noWarnings: true,
-        cookies: extractor.options?.cookie,
-      });
-      if (!streamUrl || typeof streamUrl !== 'string') return undefined;
+      const streamUrl = await ytdlExec(videoUrl, ytdlOpts, { timeout: 30000 });
+      if (!streamUrl || typeof streamUrl !== 'string') {
+        console.warn('[yt-dlp] URL vazia para:', track.title);
+        return undefined;
+      }
       const res = await fetch(streamUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
       });
-      if (!res.ok || !res.body) return undefined;
+      if (!res.ok || !res.body) {
+        console.warn('[yt-dlp] Fetch falhou:', res.status, track.title);
+        return undefined;
+      }
       return Readable.fromWeb(res.body);
     } catch (e) {
-      if (extractor.options?.logLevel === 'ALL') console.error('[yt-dlp]', e);
+      console.warn('[yt-dlp] Erro ao extrair:', track.title, '|', e.message?.slice(0, 100));
       return undefined;
     }
   }

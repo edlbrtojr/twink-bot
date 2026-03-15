@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     g++ \
     ffmpeg \
-    && pip3 install --break-system-packages yt-dlp \
+    && pip3 install --break-system-packages --upgrade yt-dlp \
     && yt-dlp --version \
     && rm -rf /var/lib/apt/lists/*
 
