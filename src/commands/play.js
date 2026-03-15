@@ -1,5 +1,6 @@
 const { createAddedToQueueEmbed } = require('../utils/embeds');
 const { MessageFlags } = require('discord.js');
+const { createPlayerButtons } = require('../utils/playerButtons');
 
 /** Verifica se a query é uma URL do YouTube (vídeo ou playlist) */
 function isYoutubeUrl(query) {
@@ -58,9 +59,11 @@ module.exports = {
       }
 
       const track = queue.currentTrack;
+      const components = createPlayerButtons(guildId, queue.node.isPaused());
       if (track) {
         return interaction.editReply({
           embeds: [createAddedToQueueEmbed(track)],
+          components,
         });
       }
 
@@ -68,6 +71,7 @@ module.exports = {
       if (added) {
         return interaction.editReply({
           embeds: [createAddedToQueueEmbed(added)],
+          components,
         });
       }
 

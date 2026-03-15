@@ -8,6 +8,7 @@ try {
 } catch (_) {}
 
 const { Client, GatewayIntentBits, MessageFlags } = require('discord.js');
+const { createPlayerButtons, isPlayerButton, parsePlayerButtonId } = require('./utils/playerButtons');
 const { Player } = require('discord-player');
 const { YoutubeiExtractor, Log } = require('discord-player-youtubei');
 
@@ -100,7 +101,8 @@ async function main() {
 
     const { createNowPlayingEmbed } = require('./utils/embeds');
     const embed = createNowPlayingEmbed(queue, track);
-    metadata.channel.send({ embeds: [embed] }).then((message) => {
+    const components = createPlayerButtons(queue.guild.id, queue.node.isPaused());
+    metadata.channel.send({ embeds: [embed], components }).then((message) => {
       const intervalId = setInterval(async () => {
         const currentTrack = queue.currentTrack;
         if (!currentTrack || currentTrack.id !== track.id) {
@@ -108,7 +110,8 @@ async function main() {
           return;
         }
         const updatedEmbed = createNowPlayingEmbed(queue, track);
-        await message.edit({ embeds: [updatedEmbed] }).catch(() => {});
+        const updatedComponents = createPlayerButtons(queue.guild.id, queue.node.isPaused());
+        await message.edit({ embeds: [updatedEmbed], components: updatedComponents }).catch(() => {});
       }, UPDATE_INTERVAL_MS);
       metadata.nowPlayingIntervalId = intervalId;
     }).catch(() => {});
@@ -194,6 +197,58 @@ async function main() {
           await interaction.respond(filtered.length > 0 ? filtered : FALLBACK_SUGGESTIONS.slice(0, 5)).catch(() => {});
         }
       }
+      return;
+    }
+
+    if (interaction.isButton() && isPlayerButton(interaction.customId)) {
+      const parsed = parsePlayerButtonId(interaction.customId);
+      if (!parsed) return;
+      const { action, guildId } = parsed;
+      const queue = player.nodes.get(guildId);
+
+      if (action === 'queue') {
+        if (!queue) {
+          return interaction.reply({ content: 'Não há fila no momento.', flags: MessageFlags.Ephemeral }).catch(() => {});
+        }
+        const { createQueueEmbed } = require('./utils/embeds');
+        const TRACKS_PER_PAGE = 10;
+        const tracks = queue.tracks.toArray();
+        const currentTrack = queue.currentTrack;
+        const totalPages = Math.max(1, Math.ceil(tracks.length / TRACKS_PER_PAGE));
+        const progressBar = queue.node.createProgressBar?.({ timecodes: true, length: 15 });
+        const embed = createQueueEmbed(tracks, currentTrack, 0, totalPages, progressBar);
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+
+      if (!queue) {
+        return interaction.reply({ content: 'Não há nada tocando no momento.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+
+      const voiceChannel = interaction.member?.voice?.channel;
+      if (!voiceChannel || voiceChannel.id !== queue.channel?.id) {
+        return interaction.reply({ content: 'Entre no mesmo canal de voz para usar os controles.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+
+      if (action === 'playpause') {
+        const isPaused = queue.node.isPaused();
+        if (isPaused) {
+          queue.node.setPaused(false);
+          interaction.reply({ content: '▶️ Retomando a reprodução.', flags: MessageFlags.Ephemeral }).catch(() => {});
+        } else {
+          queue.node.setPaused(true);
+          interaction.reply({ content: '⏸️ Pausado.', flags: MessageFlags.Ephemeral }).catch(() => {});
+        }
+        return;
+      }
+
+      if (action === 'shuffle') {
+        if (queue.tracks.size < 2) {
+          return interaction.reply({ content: 'É necessário ter pelo menos 2 músicas na fila para embaralhar.', flags: MessageFlags.Ephemeral }).catch(() => {});
+        }
+        queue.tracks.shuffle();
+        return interaction.reply({ content: '🔀 Fila embaralhada!', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+
       return;
     }
 
