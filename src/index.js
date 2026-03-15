@@ -7,7 +7,7 @@ try {
   FFmpeg.sources.unshift({ name: ffmpegPath, module: false });
 } catch (_) {}
 
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, MessageFlags } = require('discord.js');
 const { Player } = require('discord-player');
 const { YoutubeiExtractor, Log } = require('discord-player-youtubei');
 
@@ -100,7 +100,7 @@ async function main() {
     metadata.channel.send(msg).catch(() => {});
   });
 
-  client.once('ready', async () => {
+  client.once('clientReady', async () => {
     console.log(`Bot conectado como ${client.user.tag}`);
     await registerCommands();
   });
@@ -116,7 +116,7 @@ async function main() {
     } catch (error) {
       console.error(`Erro ao executar ${interaction.commandName}:`, error);
       const msg = `Erro ao executar comando: ${error.message}`;
-      const reply = { content: msg.length > 1900 ? msg.slice(0, 1900) + '...' : msg, ephemeral: true };
+      const reply = { content: msg.length > 1900 ? msg.slice(0, 1900) + '...' : msg, flags: MessageFlags.Ephemeral };
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp(reply).catch(() => {});
       } else {

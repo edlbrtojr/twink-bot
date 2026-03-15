@@ -1,19 +1,21 @@
 const { createAddedToQueueEmbed } = require('../utils/embeds');
 
+const { MessageFlags } = require('discord.js');
+
 module.exports = {
   async execute(interaction, player) {
+    await interaction.deferReply();
+
     const voiceChannel = interaction.member?.voice?.channel;
     if (!voiceChannel) {
-      return interaction.reply({
+      return interaction.editReply({
         content: 'Entre em um canal de voz primeiro.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     const query = interaction.options.getString('query', true);
     const guildId = interaction.guildId;
-
-    await interaction.deferReply();
 
     try {
       await player.play(voiceChannel, query, {

@@ -89,7 +89,8 @@ O projeto inclui `Dockerfile` e workflow do GitHub Actions para deploy automáti
 3. **Build**: o Dockerfile será detectado automaticamente
 4. **Variáveis de ambiente**: adicione `DISCORD_TOKEN` e `GENIUS_API_KEY` (opcional)
 5. **Mounts**: adicione um Volume em `/data` para persistir o banco de favoritos
-6. Ative **Auto Deploy** se quiser deploy nativo do EasyPanel, ou use o GitHub Actions abaixo
+6. **Réplicas**: use **apenas 1 réplica**. Múltiplas instâncias causam "Unknown interaction" (erro 10062)
+7. Ative **Auto Deploy** se quiser deploy nativo do EasyPanel, ou use o GitHub Actions abaixo
 
 ### 2. GitHub Actions (deploy automático)
 
@@ -109,4 +110,5 @@ O banco de favoritos usa `/data/favoritos.db`. Monte um volume em `/data` no Eas
 - **FFmpeg não encontrado**: Instale o FFmpeg e adicione ao PATH, ou defina a variável `FFMPEG_PATH`
 - **Vídeo indisponível**: Alguns vídeos podem ser privados ou restritos
 - **Bot não entra no canal**: Verifique se o bot tem permissões de Connect e Speak
+- **Unknown interaction (10062)**: Reduza para 1 réplica no EasyPanel (Deploy settings)
 # twink-bot
