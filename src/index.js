@@ -91,7 +91,10 @@ async function main() {
     if (!stderr && !stdout) console.warn('[Startup] message:', msg.slice(0, 500));
   }
 
-  function createYtDlpStream(url) {
+  function createYtDlpStream(query) {
+    const isUrl = /^https?:\/\//i.test(query);
+    const target = isUrl ? query : `ytsearch:${query}`;
+
     const args = [
       '-f', 'bestaudio[ext=webm]/bestaudio/best',
       '-o', '-',
@@ -102,7 +105,7 @@ async function main() {
     if (ytCookiesPath && fs.existsSync(ytCookiesPath)) {
       args.push('--cookies', ytCookiesPath);
     }
-    args.push(url);
+    args.push(target);
 
     const ytdlp = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     const stream = new PassThrough({ highWaterMark: 1 << 24 });
