@@ -89,58 +89,7 @@ async function main() {
     if (!stderr && !stdout) console.warn('[Startup] message:', msg.slice(0, 500));
   }
 
-  const ytdlExec = require('youtube-dl-exec');
-  const { Readable } = require('stream');
-
-  function extractVideoId(url) {
-    const match = url?.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/);
-    return match ? match[1] : null;
-  }
-
-  async function createYtDlpStream(track, _extractor) {
-    const videoId = extractVideoId(track.url);
-    if (!videoId) {
-      console.warn('[yt-dlp] URL inválida:', track.url);
-      return undefined;
-    }
-    const videoUrl = `https://youtu.be/${videoId}`;
-    const format = track.live ? 'best[height<=360]' : 'bestaudio/best';
-    const ytdlOpts = {
-      format,
-      getUrl: true,
-      noPlaylist: true,
-      noWarnings: true,
-      jsRuntimes: 'node',
-      extractorArgs: 'youtube:player_client=web',
-    };
-    if (ytCookiesPath && fs.existsSync(ytCookiesPath)) {
-      ytdlOpts.cookies = ytCookiesPath;
-    }
-    try {
-      const streamUrl = await ytdlExec(videoUrl, ytdlOpts, { timeout: 30000 });
-      if (!streamUrl || typeof streamUrl !== 'string') {
-        console.warn('[yt-dlp] URL vazia para:', track.title);
-        return undefined;
-      }
-      const res = await fetch(streamUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        },
-      });
-      if (!res.ok || !res.body) {
-        console.warn('[yt-dlp] Fetch falhou:', res.status, track.title);
-        return undefined;
-      }
-      return Readable.fromWeb(res.body);
-    } catch (e) {
-      console.warn('[yt-dlp] Erro ao extrair:', track.title, '|', e.message?.slice(0, 100));
-      return undefined;
-    }
-  }
-
   const extractorOptions = {
-    useYoutubeDL: true,
-    createStream: createYtDlpStream,
     generateWithPoToken: true,
     streamOptions: {
       useClient: 'WEB',
