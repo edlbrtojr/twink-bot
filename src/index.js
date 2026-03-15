@@ -9,7 +9,7 @@ try {
 
 const { Client, GatewayIntentBits, MessageFlags } = require('discord.js');
 const { createPlayerButtons, isPlayerButton, parsePlayerButtonId } = require('./utils/playerButtons');
-const { Player } = require('discord-player');
+const { Player, QueueRepeatMode } = require('discord-player');
 const { YoutubeiExtractor, Log } = require('discord-player-youtubei');
 
 // Suprime avisos do youtubei.js (ex: "Unable to find matching run for attachment run")
@@ -111,7 +111,8 @@ async function main() {
 
     const { createNowPlayingEmbed } = require('./utils/embeds');
     const embed = createNowPlayingEmbed(queue, track);
-    const components = createPlayerButtons(queue.guild.id, queue.node.isPaused());
+    const isAutoplay = queue.repeatMode === QueueRepeatMode.AUTOPLAY;
+    const components = createPlayerButtons(queue.guild.id, queue.node.isPaused(), isAutoplay);
     metadata.channel.send({ embeds: [embed], components }).then((message) => {
       const intervalId = setInterval(async () => {
         const currentTrack = queue.currentTrack;
@@ -120,7 +121,8 @@ async function main() {
           return;
         }
         const updatedEmbed = createNowPlayingEmbed(queue, track);
-        const updatedComponents = createPlayerButtons(queue.guild.id, queue.node.isPaused());
+        const autoplay = queue.repeatMode === QueueRepeatMode.AUTOPLAY;
+        const updatedComponents = createPlayerButtons(queue.guild.id, queue.node.isPaused(), autoplay);
         await message.edit({ embeds: [updatedEmbed], components: updatedComponents }).catch(() => {});
       }, UPDATE_INTERVAL_MS);
       metadata.nowPlayingIntervalId = intervalId;
@@ -153,6 +155,11 @@ async function main() {
     clearNowPlayingInterval(queue);
     const metadata = queue.metadata;
     if (!metadata?.channel) return;
+
+    if (queue.repeatMode === QueueRepeatMode.AUTOPLAY) {
+      console.log('[Player] Fila vazia — autoplay ativo, buscando faixa similar...');
+      return;
+    }
 
     const playedFor = metadata.lastTrackStartTime ? (Date.now() - metadata.lastTrackStartTime) / 1000 : 0;
     console.log('[Player] Fila vazia. Tocou por', playedFor.toFixed(1), 'segundos');
@@ -259,6 +266,15 @@ async function main() {
         return interaction.reply({ content: '🔀 Fila embaralhada!', flags: MessageFlags.Ephemeral }).catch(() => {});
       }
 
+      if (action === 'autoplay') {
+        const isAutoplay = queue.repeatMode === QueueRepeatMode.AUTOPLAY;
+        queue.setRepeatMode(isAutoplay ? QueueRepeatMode.OFF : QueueRepeatMode.AUTOPLAY);
+        const msg = isAutoplay
+          ? '📻 Autoplay desativado.'
+          : '📻 Autoplay ativado! Vou tocar músicas similares quando a fila acabar.';
+        return interaction.reply({ content: msg, flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+
       return;
     }
 
@@ -329,6 +345,7 @@ async function registerCommands() {
     },
     { name: 'leave', description: 'Sai do canal de voz' },
     { name: 'shuffle', description: 'Embaralha as músicas da fila' },
+    { name: 'autoplay', description: 'Ativa/desativa o modo rádio (toca músicas similares quando a fila acabar)' },
     {
       name: 'loop',
       description: 'Define o modo de repetição (faixa, fila ou autoplay)',

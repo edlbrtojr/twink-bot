@@ -3,12 +3,13 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const PREFIX = 'music_';
 
 /**
- * Cria os botões de controle do player (play/pause, shuffle, ver fila).
+ * Cria os botões de controle do player (play/pause, shuffle, ver fila, autoplay).
  * @param {string} guildId - ID do servidor
  * @param {boolean} isPaused - Se a reprodução está pausada
+ * @param {boolean} isAutoplay - Se o autoplay está ativado
  * @returns {ActionRowBuilder[]}
  */
-function createPlayerButtons(guildId, isPaused) {
+function createPlayerButtons(guildId, isPaused, isAutoplay = false) {
   const playPause = new ButtonBuilder()
     .setCustomId(`${PREFIX}playpause_${guildId}`)
     .setLabel(isPaused ? 'Retomar' : 'Pausar')
@@ -21,13 +22,19 @@ function createPlayerButtons(guildId, isPaused) {
     .setEmoji('🔀')
     .setStyle(ButtonStyle.Secondary);
 
+  const autoplay = new ButtonBuilder()
+    .setCustomId(`${PREFIX}autoplay_${guildId}`)
+    .setLabel(isAutoplay ? 'Rádio: ON' : 'Rádio: OFF')
+    .setEmoji('📻')
+    .setStyle(isAutoplay ? ButtonStyle.Success : ButtonStyle.Secondary);
+
   const queue = new ButtonBuilder()
     .setCustomId(`${PREFIX}queue_${guildId}`)
     .setLabel('Ver fila')
     .setEmoji('📋')
     .setStyle(ButtonStyle.Secondary);
 
-  return [new ActionRowBuilder().addComponents(playPause, shuffle, queue)];
+  return [new ActionRowBuilder().addComponents(playPause, shuffle, autoplay, queue)];
 }
 
 /**
