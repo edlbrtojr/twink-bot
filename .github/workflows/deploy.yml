@@ -1,0 +1,25 @@
+name: Deploy to EasyPanel
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger EasyPanel deployment
+        run: |
+          if [ -z "${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}" ]; then
+            echo "::warning::EASYPANEL_DEPLOY_WEBHOOK não configurado. Configure o secret no repositório."
+            exit 0
+          fi
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}")
+          if [ "$response" = "200" ] || [ "$response" = "201" ] || [ "$response" = "204" ]; then
+            echo "Deploy acionado com sucesso (HTTP $response)"
+          else
+            echo "::warning::Webhook retornou HTTP $response. Verifique a URL e se o EasyPanel está acessível."
+          fi
